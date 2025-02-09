@@ -1,3 +1,5 @@
+using CQRSMediatR.Behaviors;
+using CQRSMediatR.Exceptions;
 using CQRSMediatR.Features.Products.Commands.Create;
 using CQRSMediatR.Features.Products.Commands.Delete;
 using CQRSMediatR.Features.Products.Commands.Update;
@@ -5,6 +7,7 @@ using CQRSMediatR.Features.Products.Queries.Get;
 using CQRSMediatR.Features.Products.Queries.List;
 using CQRSMediatR.Notifications;
 using CQRSMediatR.Persistence;
+using FluentValidation;
 using MediatR;
 using System.Reflection;
 
@@ -15,7 +18,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>();
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+    cfg.AddOpenBehavior(typeof(RequestResponseLoggingBehavior<,>));
+    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+});
+builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 
 var app = builder.Build();
@@ -62,5 +73,7 @@ app.MapDelete("/products/{id:guid}", async (Guid id, ISender mediatr) =>
 });
 
 app.UseHttpsRedirection();
+
+app.UseExceptionHandler();
 
 app.Run();
